@@ -16,6 +16,7 @@ private extension UICollectionView {
     }
 }
 
+// MARK - 画像ファイル一覧画面
 class AssetGridViewController: UICollectionViewController {
     
     var fetchResult: PHFetchResult<PHAsset>!
@@ -54,7 +55,7 @@ class AssetGridViewController: UICollectionViewController {
     override func viewWillLayoutSubviews() {
         super.viewWillLayoutSubviews()
         let width = view.bounds.inset(by: view.safeAreaInsets).width
-        // Adjust the item size if the available width has changed.
+        // 使用可能な幅が変更された場合はアイテムサイズを調整します。
         if availableWidth != width {
             availableWidth = width
             let columnCount = (availableWidth / 80).rounded(.towardZero)
@@ -66,12 +67,12 @@ class AssetGridViewController: UICollectionViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Determine the size of the thumbnails to request from the PHCachingImageManager.
+        // PHCachingImageManagerから要求するサムネイルのサイズを決定します。
         let scale = UIScreen.main.scale
         let cellSize = collectionViewFlowLayout.itemSize
         thumbnailSize = CGSize(width: cellSize.width * scale, height: cellSize.height * scale)
         
-        // Add a button to the navigation bar if the asset collection supports adding content.
+        // アセットコレクションでコンテンツの追加がサポートされている場合は、ナビゲーションバーにボタンを追加します。
         if assetCollection == nil || assetCollection.canPerform(.addContent) {
             navigationItem.rightBarButtonItem = addButtonItem
         } else {
@@ -110,11 +111,11 @@ class AssetGridViewController: UICollectionViewController {
             cell.livePhotoBadgeImage = PHLivePhotoView.livePhotoBadgeImage(options: .overContent)
         }
         
-        // Request an image for the asset from the PHCachingImageManager.
+        // PHCachingImageManagerからアセットのイメージをリクエストします。
         cell.representedAssetIdentifier = asset.localIdentifier
         imageManager.requestImage(for: asset, targetSize: thumbnailSize, contentMode: .aspectFill, options: nil, resultHandler: { image, _ in
-            // UIKit may have recycled this cell by the handler's activation time.
-            // Set the cell's thumbnail image only if it's still showing the same asset.
+            // UIKitはハンドラの起動時間によってこのセルをリサイクルしている可能性があります。
+            //同じアセットを表示している場合にのみ、セルのサムネイルイメージを設定します。
             if cell.representedAssetIdentifier == asset.localIdentifier {
                 cell.thumbnailImage = image
             }
@@ -136,18 +137,18 @@ class AssetGridViewController: UICollectionViewController {
     }
     /// - Tag: UpdateAssets
     fileprivate func updateCachedAssets() {
-        // Update only if the view is visible.
+        // ビューが表示されている場合のみ更新します。
         guard isViewLoaded && view.window != nil else { return }
         
-        // The window you prepare ahead of time is twice the height of the visible rect.
+        // 前もって準備しておくウィンドウは、表示されている矩形の高さの2倍です。
         let visibleRect = CGRect(origin: collectionView!.contentOffset, size: collectionView!.bounds.size)
         let preheatRect = visibleRect.insetBy(dx: 0, dy: -0.5 * visibleRect.height)
         
-        // Update only if the visible area is significantly different from the last preheated area.
+        // 可視領域が最後の予熱領域と大きく異なる場合にのみ更新します。
         let delta = abs(preheatRect.midY - previousPreheatRect.midY)
         guard delta > view.bounds.height / 3 else { return }
         
-        // Compute the assets to start and stop caching.
+        // キャッシュを開始および停止するアセットを計算します。
         let (addedRects, removedRects) = differencesBetweenRects(previousPreheatRect, preheatRect)
         let addedAssets = addedRects
             .flatMap { rect in collectionView!.indexPathsForElements(in: rect) }
@@ -156,12 +157,12 @@ class AssetGridViewController: UICollectionViewController {
             .flatMap { rect in collectionView!.indexPathsForElements(in: rect) }
             .map { indexPath in fetchResult.object(at: indexPath.item) }
         
-        // Update the assets the PHCachingImageManager is caching.
+        // PHCachingImageManagerがキャッシングしているアセットを更新します。
         imageManager.startCachingImages(for: addedAssets,
                                         targetSize: thumbnailSize, contentMode: .aspectFill, options: nil)
         imageManager.stopCachingImages(for: removedAssets,
                                        targetSize: thumbnailSize, contentMode: .aspectFill, options: nil)
-        // Store the computed rectangle for future comparison.
+        // 将来の比較のために計算された矩形を格納します。
         previousPreheatRect = preheatRect
     }
     
@@ -195,7 +196,7 @@ class AssetGridViewController: UICollectionViewController {
     /// - Tag: AddAsset
     @IBAction func addAsset(_ sender: AnyObject?) {
         
-        // Create a dummy image of a random solid color and random orientation.
+        // ランダムな単色とランダムな向きのダミー画像を作成します。
         let size = (arc4random_uniform(2) == 0) ?
             CGSize(width: 400, height: 300) :
             CGSize(width: 300, height: 400)
@@ -205,7 +206,7 @@ class AssetGridViewController: UICollectionViewController {
                     saturation: 1, brightness: 1, alpha: 1).setFill()
             context.fill(context.format.bounds)
         }
-        // Add the asset to the photo library.
+        // 写真ライブラリにアセットを追加します。
         PHPhotoLibrary.shared().performChanges({
             let creationRequest = PHAssetChangeRequest.creationRequestForAsset(from: image)
             if let assetCollection = self.assetCollection {
